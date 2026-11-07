@@ -311,7 +311,7 @@ Avvia una LIVE su un feed pertinente alla trasformazione digitale e osserva l'es
 
 ### Evoluzioni non ancora implementate
 
-- Profili editoriali selezionabili (PA digitale, cultura, sport ecc.) con missioni distinte.
+- Profili editoriali selezionabili (PA digitale, innovazione, cultura, società ecc.) con missioni distinte.
 - Multiutente con ruoli separati e autorizzazioni differenziate.
 - Registrazione dei GO bloccati e degli accessi negati con audit dedicato.
 - Costi effettivi e quote residue dei fornitori; avvisi di soglia e budget.
