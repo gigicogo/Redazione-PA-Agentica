@@ -1,325 +1,328 @@
 # Redazione PA — L'agente propone. Tu decidi.
 
-**Prototipo didattico per il Modulo B: uso e governance dell'intelligenza artificiale nella Pubblica Amministrazione italiana.**
+**Laboratorio di intelligenza artificiale agentica, supervisione umana e controllo dei costi nella Pubblica Amministrazione.**
 
-La redazione analizza un feed RSS pubblico, sceglie se approfondire alcuni contenuti, può preparare una bozza per Bluesky e sottopone ogni eventuale pubblicazione all'autorizzazione di una persona. È un esercizio di **autonomia delimitata, controllo umano e tracciabilità**, non uno strumento pronto per la comunicazione istituzionale.
+[**Apri la web app**](https://gigicogo.github.io/Redazione-PA-Agentica/) · [Repository e registro tecnico](https://github.com/gigicogo/Redazione-PA-Agentica)
 
-**Pannello:** <https://gigicogo.github.io/Redazione-PA-Agentica/>  
-**Repository tecnico:** <https://github.com/gigicogo/Redazione-PA-Agentica>
+> **La regola del progetto:** l'agente può cercare, selezionare, approfondire e scrivere una proposta. **Non può decidere autonomamente di pubblicarla.** L'operatore verifica la fonte, può correggere o scartare e autorizza esplicitamente ogni eventuale pubblicazione.
 
-> **La regola essenziale:** puoi cambiare il feed RSS dal pannello, ma **non cambi automaticamente la missione dell'agente**. La pertinenza è valutata rispetto alle istruzioni editoriali di `config.json` e ai prompt contenuti in `scripts/research.py`. Non c'è un filtro assoluto che riconosca ed escluda, per esempio, tutte le notizie sportive.
+La **Redazione PA** è un prototipo didattico in cloud, sviluppato per mostrare in modo concreto il funzionamento e la governance di un agente IA. Dal pannello web è possibile avviare una ricerca su un RSS pubblico, valutare le proposte, pubblicare su Bluesky dopo un GO umano e consultare l'**Osservatorio dell'agente**: attività, token, stime di costo e lavoro umano.
 
-> **Stato prudenziale della demo:** lasciare `"publishing_enabled": false` durante i collaudi. Una bozza LIVE non comporta alcuna pubblicazione; anche il comando GO viene bloccato finché questa impostazione rimane falsa. La modalità DEMO non può pubblicare.
+**Non è un prodotto certificato né una piattaforma di comunicazione istituzionale pronta all'uso.** Non impiegare dati personali, documenti riservati o contenuti non destinati alla diffusione pubblica.
 
 ---
 
-## 1. Cosa fa oggi la web app
+## Indice
 
-Dal **pannello web**, senza dover aprire GitHub per le normali attività, l'operatore autorizzato può:
+1. [In cinque minuti: come si usa](#1-in-cinque-minuti-come-si-usa)
+2. [LIVE e DEMO: la differenza](#2-live-e-demo-la-differenza)
+3. [Le regole dell'agente: cambiare RSS non cambia missione](#3-le-regole-dellagente-cambiare-rss-non-cambia-missione)
+4. [Il controllo umano: GO, RIVEDI e SCARTA](#4-il-controllo-umano-go-rivedi-e-scarta)
+5. [Osservatorio: attività, consumi, costi e qualità](#5-osservatorio-attività-consumi-costi-e-qualità)
+6. [Architettura: cosa lavora dietro le quinte](#6-architettura-cosa-lavora-dietro-le-quinte)
+7. [Configurazione per l'amministratore](#7-configurazione-per-lamministratore)
+8. [Sicurezza, responsabilità e limiti](#8-sicurezza-responsabilità-e-limiti)
+9. [Problemi frequenti e verifiche](#9-problemi-frequenti-e-verifiche)
+10. [Utilizzo didattico e sviluppi futuri](#10-utilizzo-didattico-e-sviluppi-futuri)
 
-1. Scegliere un **RSS pubblico HTTPS** e avviare una ricerca **LIVE**.
-2. Eseguire una **DEMO** con contenuti fittizi (senza chiamate a Groq).
-3. Vedere le proposte create dall'agente, con fonte, motivazione e controlli suggeriti.
-4. Usare **RIVEDI** per correggere il testo, **SCARTA** per archiviare oppure **GO** per chiedere la pubblicazione, soggetta ai controlli.
-5. Consultare l'esito della richiesta e aggiornare le proposte.
+## 1. In cinque minuti: come si usa
 
-Il pannello richiede l'accesso GitHub per **identificare l'operatore autorizzato**, ma GitHub Actions e Issues rimangono normalmente dietro le quinte. L'area **Dettagli tecnici per l'amministratore** consente di accedere al registro quando serve.
+Nelle normali operazioni **non occorre aprire GitHub**: GitHub Actions e GitHub Issues sono il motore tecnico e il registro delle attività, non l'interfaccia del funzionario.
+
+1. Apri la [web app Redazione PA](https://gigicogo.github.io/Redazione-PA-Agentica/).
+2. Premi **Accedi con GitHub** ed entra con l'utente autorizzato (nella configurazione di questo laboratorio: `gigicogo`).
+3. Scegli **LIVE — Ricerca con IA** oppure **DEMO — Simulazione**.
+4. In LIVE inserisci l'URL di un **feed RSS/Atom HTTPS pubblico** e premi **Avvia la ricerca**. Il feed scelto per la singola ricerca non riscrive `config.json`.
+5. Attendi l'esito. L'agente può creare una proposta, scartare i candidati oppure non produrre nulla: **nessuna proposta non significa automaticamente errore**.
+6. Se compare una proposta, apri la **fonte originale** e controlla fatti, date, attribuzioni e pertinenza; poi scegli **RIVEDI**, **SCARTA** o **GO**.
+7. Apri **Osservatorio dell'agente** per consultare attività e consumi; puoi anche registrare i minuti dedicati al lavoro umano.
+
+**Importante:** la ricerca e la pubblicazione sono due fasi separate. Avviare LIVE non pubblica automaticamente alcun contenuto.
+
+## 2. LIVE e DEMO: la differenza
+
+| | **LIVE — Ricerca con IA** | **DEMO — Simulazione** |
+|---|---|---|
+| Fonti | Legge il feed RSS pubblico indicato | Utilizza il feed di esempio `examples/rss-demo.xml`, con contenuti fittizi |
+| Modello Groq | **Sì**: selezione e proposta affidate al modello | **No**: nessuna chiamata a Groq |
+| Esito | Può creare una bozza oppure decidere STOP/SKIP | Esegue un percorso dimostrativo; può non creare una nuova Issue se il contenuto è già stato trattato |
+| RIVEDI / SCARTA | Consentiti secondo le verifiche del sistema | Consentiti per esercitarsi |
+| Pubblicazione con GO | Possibile **solo** se autorizzata e abilitata | **Sempre bloccata** |
+| Osservatorio | Registra attività e token restituiti da Groq | Registra l'esecuzione con **zero token Groq** |
+
+**DEMO dimostra il processo. LIVE mette alla prova il comportamento dell'agente.**
+
+## 3. Le regole dell'agente: cambiare RSS non cambia missione
+
+Il feed rappresenta **la materia prima**. La missione editoriale stabilisce **quali notizie cercare e con quali criteri scrivere**.
+
+Nel pacchetto di riferimento, l'agente opera come **analista editoriale di una Pubblica Amministrazione**, rivolgendosi a *dipendenti pubblici e cittadini interessati alla trasformazione digitale*. Le linee editoriali chiedono tono informativo, chiarezza, prudenza, assenza di promozione e nessuna affermazione priva di riscontro nella fonte.
+
+Questi criteri sono contenuti in `config.json` (`audience`, `editorial_guidelines`) e nei prompt di `scripts/research.py`. Se la configurazione pubblicata nel tuo repository è stata modificata, **prevalgono i valori effettivamente online**.
+
+### Limiti operativi previsti dal codice
+
+| Aspetto | Regola |
+|---|---|
+| Notizie candidate | Fino a **6** per ricerca, con i parametri di riferimento |
+| Approfondimenti | Al massimo **2** tentativi |
+| Valutazione | Il modello può scegliere **STOP** o **SKIP** e non creare alcuna proposta |
+| Lettura | Si tenta il recupero della pagina; se inaccessibile, può essere usato soltanto l'estratto RSS, indicando il limite |
+| Fonti | RSS pubblici HTTPS; sono previsti controlli sugli indirizzi per evitare accessi a risorse private/locali |
+| Istruzioni esterne | Un articolo o un feed **non possono autorizzare azioni**: il modello non deve seguire istruzioni ricevute dalle fonti |
+| Pubblicazione | Mai autonoma: dipende da una decisione umana e da controlli software |
+
+I criteri editoriali affidati al modello **non sono un filtro matematico garantito**. L'IA può selezionare contenuti poco pertinenti o sbagliare la sintesi: la revisione resta necessaria.
+
+### Posso usare un feed di sport o cinema?
+
+**Sì**, se è pubblico, HTTPS e leggibile. Ma l'agente mantiene la missione PA/innovazione, salvo modifiche esplicite alle sue istruzioni.
+
+| Notizia | Comportamento auspicabile con la missione attuale |
+|---|---|
+| Risultato di una partita | Tendenzialmente **STOP** |
+| Prenotazione online di impianti sportivi comunali | **Possibile selezione** |
+| Recensione di un film commerciale | Tendenzialmente **STOP** |
+| Digitalizzazione di una cineteca pubblica | **Possibile selezione** |
+| Nuovo servizio digitale comunale | **Candidato pertinente** |
+
+Questi esempi **non garantiscono** che il modello risponda sempre così. Per creare una vera redazione dedicata a sport, cultura o turismo occorre modificare la missione (`audience`, `editorial_guidelines`) e, se necessario, i prompt Python, quindi effettuare nuovi test.
+
+**RSS per una ricerca:** si cambia direttamente nel pannello. **RSS predefinito:** si modifica amministrativamente nel parametro `rss_url` di `config.json`. Sono due operazioni diverse.
+
+## 4. Il controllo umano: GO, RIVEDI e SCARTA
+
+Una proposta è una **bozza**, non un contenuto già autorizzato.
+
+| Comando | Effetto |
+|---|---|
+| **RIVEDI** | Salva una nuova versione del testo e la registra nella cronologia. **Non pubblica.** Serve un successivo GO esplicito. |
+| **SCARTA** | Archivia la proposta, chiude l'Issue e **non pubblica**. |
+| **GO** | Chiede la pubblicazione della specifica versione esaminata. Il sistema verifica identità, stato della proposta, contenuto e interruttori di sicurezza. |
+
+Il GO del pannello contiene un'impronta del testo visualizzato: se la bozza cambia, il sistema può bloccare l'approvazione di una versione non più corrispondente. La pubblicazione richiede inoltre tutte le condizioni previste da `scripts/approve.py`.
+
+**La pubblicazione viene bloccata**, fra l'altro, se la proposta è DEMO, se `publishing_enabled` è `false`, se la proposta è già chiusa, se il testo non supera i controlli o se mancano le credenziali necessarie.
+
+Quando un GO LIVE va a buon fine, il sistema crea il post su **Bluesky**, registra nella Issue il collegamento e il testo pubblicato e chiude la proposta. Il prototipo è stato collaudato anche con un handle di dominio personalizzato (es. `gigicogo.it`).
+
+> **Durante le dimostrazioni in aula**, impostare `"publishing_enabled": false` se non si desiderano pubblicazioni reali. L'interruttore blocca i nuovi GO, **non cancella** post già pubblicati. L'utente responsabile deve verificare lo stato effettivo di `config.json` prima di ogni esercitazione.
+
+## 5. Osservatorio: attività, consumi, costi e qualità
+
+L'**Osservatorio dell'agente** è accessibile dal pannello con la stessa autenticazione GitHub usata per le decisioni. I dati delle ricerche sono raccolti a partire dall'installazione dell'Osservatorio nel database **Cloudflare D1**.
+
+### Che cosa misura automaticamente
+
+- **Ricerche LIVE e DEMO**, esiti, errori, ricerche concluse senza proposta.
+- **Tentativi di chiamata a Groq** e token in ingresso/uscita comunicati dalle risposte API; separazione dei token input in cache quando il dato è disponibile.
+- **Tempi di esecuzione dello script Python** e ultime ricerche registrate.
+- **Proposte create, pubblicate, scartate, revisionate o ancora aperte**: ricavate dal registro delle GitHub Issues.
+- **Andamento giornaliero dei token** e filtri di consultazione per gli ultimi **7, 30 o 90 giorni**.
+
+La modalità DEMO non chiama Groq. Una ricerca LIVE che decide **STOP** può consumare token anche se non produce alcuna bozza: è un'informazione importante per valutare l'efficienza reale.
+
+### Costi IA: stime, non fatture
+
+Il pannello consente di impostare tariffe in **USD per milione di token** (input, input in cache, output). Come valori iniziali usa le tariffe di riferimento del modello `openai/gpt-oss-20b`; possono cambiare e devono essere aggiornate quando cambia il modello o il listino.
+
+```text
+Costo teorico IA (USD) =
+  [ (token input − token input in cache) × tariffa input
+    + token input in cache × tariffa cache
+    + token output × tariffa output ] / 1.000.000
+```
+
+**Non è l'importo effettivamente pagato a Groq.** Se si utilizza un piano gratuito, il costo di listino simulato può essere positivo anche quando la fattura del servizio è zero.
+
+### Lavoro umano: ideazione, gestione e supervisione
+
+L'operatore può registrare manualmente:
+
+- **Ideazione e sviluppo**;
+- **Gestione e manutenzione**;
+- **Supervisione e controllo qualità**;
+- **Sicurezza e verifiche**;
+- **Formazione**;
+- **Altro**.
+
+Per ogni attività inserisce **minuti** e **valore orario in EUR**; il calcolo è `minuti ÷ 60 × valore orario`. Il risultato rappresenta il **valore economico del tempo dichiarato**, non necessariamente un esborso aggiuntivo dell'Ente.
+
+**Non sommare direttamente gli euro del lavoro umano ai dollari del costo IA** senza scegliere un criterio di cambio e un metodo contabile espliciti.
+
+### Che cosa NON misura ancora
+
+- I token e i costi Groq **precedenti all'installazione** dell'Osservatorio.
+- Le **fatture effettive** o le quote residue dei piani Groq/Cloudflare/GitHub/Bluesky.
+- I **GO bloccati** e gli accessi negati come contatori dedicati.
+- Il tempo di lavoro umano **non registrato** dall'operatore.
+- Un risparmio di tempo o denaro **dimostrato**: per calcolarlo serve una baseline del lavoro manuale comparabile.
+
+Le revisioni possono essere conteggiate **una volta per proposta**, anche quando una bozza è stata modificata più volte. Il registro delle Issues è letto con un limite di copertura (nell'implementazione dell'Osservatorio: **400 proposte** per consultazione). I numeri non vanno interpretati come audit esaustivo in presenza di limiti o dati mancanti.
+
+**Domanda utile per il corso:** *Stiamo riducendo il lavoro oppure lo stiamo spostando dalla redazione alla verifica e al controllo?*
+
+## 6. Architettura: cosa lavora dietro le quinte
 
 ```mermaid
 flowchart TD
-    A[Operatore: sceglie RSS e LIVE o DEMO] --> B[Cloudflare: autentica e avvia la ricerca]
-    B --> C[GitHub Actions: esegue il processo]
-    C --> D{Agente: vale la pena approfondire?}
-    D -->|STOP| E[Nessuna nuova proposta]
-    D -->|SÌ| F[Legge pagina o estratto RSS]
-    F --> G{Bozza fondata sulla fonte?}
-    G -->|NO| E
-    G -->|SÌ| H[GitHub Issues: bozza e traccia]
-    H --> I{Operatore autenticato nel pannello}
-    I -->|RIVEDI| J[Modifica registrata; serve nuovo GO]
-    J --> I
-    I -->|SCARTA| K[Archivia senza pubblicare]
-    I -->|GO| L{Controlli tecnici superati?}
-    L -->|NO| M[Blocco motivato]
-    L -->|SÌ| N[Post Bluesky sull'account di prova]
+    U[Operatore nel pannello GitHub Pages] --> W[Cloudflare Worker: OAuth e autorizzazioni]
+    W -->|Avvio autenticato| A[GitHub Actions: ricerca.yml]
+    A --> F[Feed RSS pubblico]
+    A -->|Solo LIVE| G[Groq: selezione e bozza]
+    A --> I[GitHub Issues: proposte e tracce]
+    U -->|RIVEDI / SCARTA / GO| W
+    W -->|Comando autorizzato| I
+    I --> P[GitHub Actions: approvazione.yml]
+    P -->|Solo GO LIVE valido| B[Bluesky]
+    A -->|Misure senza testi degli articoli| W
+    W --> D[(Cloudflare D1: agent_runs e labor_entries)]
+    U -->|Consulta metriche e registra tempo| W
 ```
 
-### Due livelli da non confondere
-
-- **RSS = cosa l'agente può leggere:** cambia la materia prima, non le sue istruzioni.
-- **Missione editoriale = cosa l'agente dovrebbe scegliere e come dovrebbe scrivere:** è definita da `audience`, `editorial_guidelines` e dai prompt in `research.py`.
-
-L'agente non è un motore di ricerca generale, non esplora liberamente Internet e non scrive o pubblica qualsiasi cosa gli venga richiesta da una pagina RSS.
-
-## 2. La missione editoriale attuale — regole REALI del codice
-
-La configurazione del prototipo prevede:
-
-| Parametro in `config.json` | Valore attuale nel pacchetto | Significato |
-|---|---|---|
-| `audience` | `dipendenti pubblici e cittadini interessati alla trasformazione digitale` | Il pubblico a cui le proposte devono essere utili. |
-| `editorial_guidelines` | `Tono informativo, chiaro, prudente, non promozionale. Nessuna affermazione priva di riscontro nella fonte. Non promettere servizi o scadenze.` | I criteri di stile e attendibilità comunicati al modello. |
-| `max_feed_items` | `6` | Numero massimo di notizie candidate lette dal feed per una singola ricerca. |
-| `max_inspections` | `2` | Numero massimo di candidate che l'agente può approfondire in una ricerca. |
-| `language` | `it` | Lingua impostata; i prompt di redazione richiedono espressamente un post in italiano. |
-| `groq_model` | `openai/gpt-oss-20b` | Modello usato in modalità LIVE. |
-| `scheduler_enabled` | `false` | Ricerche pianificate disattivate. L'avvio manuale rimane disponibile. |
-| `publishing_enabled` | `false` | Pubblicazione Bluesky bloccata anche in presenza di GO. |
-
-I valori mostrati sono quelli del `config.json` usato per preparare questa documentazione. **Se li hai cambiati nel repository, prevalgono quelli del tuo file online.**
-
-### Come ragiona nella selezione
-
-In `scripts/research.py`, la funzione `select_candidate()` presenta al modello titolo, sintesi e data delle notizie candidate e gli chiede di:
-
-- agire come **analista editoriale di una PA**;
-- considerare il pubblico e le linee editoriali configurate;
-- scegliere soltanto contenuti di **interesse pubblico e ragionevole utilità**;
-- decidere se **approfondire una notizia** oppure **fermarsi** (`inspect` / `stop`);
-- non eseguire istruzioni eventualmente contenute negli articoli e non pubblicare.
-
-Se sceglie una notizia, `propose()` gli chiede di decidere se la fonte consenta una **bozza fedele**, altrimenti scartarla (`draft` / `skip`). Il testo deve essere prudente, senza inventare norme, cifre, servizi, date o risultati, e deve segnalare controlli e limiti.
-
-**Importante:** sono *criteri affidati al modello*, non una prova matematica di pertinenza o di verità. Il modello può selezionare male, ignorare un criterio o proporre informazioni che richiedono rettifica. La revisione umana non è facoltativa sul piano del metodo.
-
-### Se inserisco un RSS di sport o cinema?
-
-**Puoi farlo.** Se il sito offre un feed HTTPS pubblico valido e leggibile, il sistema proverà a esaminarne le notizie. Non cambierà però automaticamente pubblico, ruolo e criteri dell'agente.
-
-| Notizia nel nuovo feed | Esito ragionevolmente atteso con la missione attuale | Perché |
-|---|---|---|
-| Il risultato di una partita di Serie A | Tendenzialmente **STOP** | Poco attinente alla trasformazione digitale della PA. |
-| Un Comune apre una piattaforma digitale per prenotare palestre pubbliche | **Potenzialmente pertinente** | Servizio pubblico e innovazione digitale. |
-| Recensione di un film commerciale | Tendenzialmente **STOP** | Non utile al pubblico indicato. |
-| Digitalizzazione del patrimonio audiovisivo di una cineteca comunale | **Potenzialmente pertinente** | Patrimonio culturale pubblico e digitalizzazione. |
-| Nuova procedura online per i servizi demografici | **Potenzialmente pertinente** | Servizio amministrativo digitale. |
-
-Gli esempi descrivono **comportamenti desiderabili, non esiti garantiti**. Non esiste nel codice un elenco di domini consentiti o vietati (sport, cinema, tecnologia ecc.) né un classificatore deterministico per materia. Se una notizia sportiva viene comunque proposta, non significa che l'RSS abbia «cambiato le istruzioni»: significa che il modello l'ha ritenuta compatibile, correttamente oppure no.
-
-### Quando cambiare solo RSS e quando cambiare anche le istruzioni
-
-| Obiettivo | Cosa modificare |
+| Componente | Compito |
 |---|---|
-| Esaminare un diverso sito con la **stessa missione PA/digitale** | Cambia **solo l'RSS** dal pannello. |
-| Creare una redazione realmente dedicata a **sport comunale, cultura, cinema o turismo** | Modifica `audience` e `editorial_guidelines` in `config.json`; se occorre una missione nuova e coerente in ogni passaggio, adatta anche i prompt di `scripts/research.py` dopo test. |
-| Cambiare **solo la fonte predefinita** per le ricerche successive | Modifica `rss_url` in `config.json` (operazione di amministrazione). |
-| Cambiare RSS per **una singola ricerca** | Scrivi il nuovo indirizzo nel pannello e avvia LIVE; il feed predefinito del repository rimane invariato. |
+| **GitHub Pages** (`index.html`) | Unica interfaccia ordinaria: ricerca, proposte, approvazioni e Osservatorio. |
+| **Cloudflare Worker** (`cloudflare-worker/worker.js`) | Autentica l'operatore, controlla le azioni, avvia i workflow ed espone le metriche. |
+| **GitHub Actions — ricerca** (`.github/workflows/ricerca.yml`) | Esegue `scripts/research.py`, chiama Groq in LIVE e registra la telemetria. |
+| **GitHub Issues** | Conserva proposte, fonte, cronologia delle revisioni ed esiti. Nel repository pubblico, anche le Issues sono consultabili pubblicamente. |
+| **GitHub Actions — approvazione** (`.github/workflows/approvazione.yml`) | Esegue i controlli RIVEDI/SCARTA/GO tramite `scripts/approve.py`. |
+| **Groq** | Fornisce il modello IA nella modalità LIVE. |
+| **Cloudflare D1** | Memorizza le misure delle esecuzioni (`agent_runs`) e le attività umane dichiarate (`labor_entries`). |
+| **Bluesky** | Riceve esclusivamente i post autorizzati dal processo GO. |
 
-Esempio **puramente illustrativo** di nuova missione per una redazione culturale (non è la configurazione corrente):
+L'Osservatorio **non deve bloccare la ricerca** se la telemetria non è raggiungibile: l'invio delle metriche è progettato come operazione non bloccante. La pubblicazione resta gestita da un workflow separato.
 
-```json
-{
-  "audience": "cittadini interessati ai servizi culturali e alle iniziative pubbliche comunali",
-  "editorial_guidelines": "Seleziona contenuti relativi a servizi culturali pubblici, musei, biblioteche e iniziative comunali. Tono informativo, prudente, mai promozionale. Distingui chiaramente comunicati istituzionali, eventi e opinioni. Non inventare date, orari o modalità di accesso."
-}
+## 7. Configurazione per l'amministratore
+
+Questa sezione riguarda la gestione tecnica, **non l'operatore che usa il pannello**.
+
+### File principali
+
+```text
+index.html                         Pannello web e Osservatorio
+config.json                        Missione, feed e interruttori
+scripts/research.py                Ricerca agentica e proposte
+scripts/telemetry.py               Raccolta e invio misurazioni
+scripts/approve.py                 Approvazione e pubblicazione
+scripts/common.py                  Funzioni comuni e accesso alle fonti
+.github/workflows/ricerca.yml      Workflow della ricerca
+.github/workflows/approvazione.yml Workflow delle decisioni
+cloudflare-worker/worker.js        Codice da distribuire su Cloudflare
+cloudflare-worker/schema.sql       Schema database Cloudflare D1
 ```
 
-Questo è **solo un frammento esemplificativo**, non un file `config.json` completo. Modificare questi campi non garantisce di per sé una nuova specializzazione: l'identità di **analista editoriale di una PA** è scritta anche nei prompt Python e va verificata rispetto allo scopo.
+> `cloudflare-worker/worker.js` deve essere **distribuito nel Worker Cloudflare**. Il solo file nel repository non aggiorna il servizio in esercizio. Non sostituire `approve.py` con versioni vecchie: includono una gestione non corretta dell'identificativo dei post Bluesky.
 
-## 3. Limiti e controlli: cosa è obbligato a fare il software, cosa decide il modello
+### Parametri `config.json`
 
-| Tipo di vincolo | Comportamento effettivo |
+| Parametro | Significato |
 |---|---|
-| **Ingresso** | Per l'avvio diretto dal pannello, il Cloudflare Worker accetta RSS **HTTPS pubblici**, senza credenziali, host locali o porte non standard. Lo script di recupero verifica inoltre che gli indirizzi non puntino a reti private. |
-| **Formato** | Il feed deve essere leggibile come **RSS/Atom** e contenere collegamenti HTTP(S) a notizie. Un feed non valido può far fallire il processo. |
-| **Ampiezza** | Il codice limita a **6** i contenuti candidati e a **2** i tentativi di approfondimento, con i valori attuali di configurazione. |
-| **Scelta** | Il modello può rispondere **STOP** o **SKIP**. Nessuna nuova bozza è un esito legittimo. |
-| **Accesso agli articoli** | Cerca di leggere la pagina pubblica. Se non riesce, può ripiegare sulla sola descrizione RSS e lo segnala. **Questo non costituisce una verifica della notizia.** |
-| **Scrittura** | Il prompt chiede un testo senza link, normalmente entro **180 caratteri**; il codice accetta bozze fra **25 e 220 caratteri** e scarta formati non conformi. |
-| **Fonte** | Il collegamento alla fonte viene aggiunto separatamente al momento dell'eventuale pubblicazione. Il GO controlla HTTPS e la lunghezza complessiva. |
-| **Approvals** | **RIVEDI** registra un nuovo testo; **SCARTA** chiude la proposta; **GO** richiede un'autorizzazione esplicita per quella bozza. |
-| **Blocco pubblicazione** | GO è sempre bloccato in DEMO e quando `publishing_enabled` è `false`; per pubblicare servono anche le credenziali Bluesky. |
-| **Tracciabilità** | La proposta, la fonte, la motivazione, le revisioni e le decisioni sono conservate nelle GitHub Issues. |
+| `repository` | Repository GitHub effettivo (`gigicogo/Redazione-PA-Agentica`) |
+| `rss_url` | Feed proposto come predefinito |
+| `audience`, `editorial_guidelines` | Missione e criteri editoriali |
+| `max_feed_items`, `max_inspections` | Limiti dei candidati e degli approfondimenti |
+| `groq_model`, `language` | Modello e lingua |
+| `scheduler_enabled` | Attiva/disattiva la ricerca pianificata (indipendente dall'avvio manuale) |
+| `publishing_enabled` | **Interruttore della pubblicazione reale** |
+| `approval_api_url` | URL HTTPS del Worker Cloudflare che serve il pannello e riceve la telemetria |
 
-**Non sono garantiti:** accuratezza dei fatti, pertinenza assoluta, completezza della fonte, verifica da fonti indipendenti, rispetto delle policy dell'Ente o idoneità del contenuto alla pubblicazione istituzionale. L'operatore deve **aprire e verificare la fonte**.
+**Non sostituire alla cieca il `config.json` già online:** potrebbe contenere feed, abilitazioni e URL aggiornati. Il file è pubblico e **non deve contenere credenziali**.
 
-Il codice tenta inoltre di evitare di riesaminare notizie con **lo stesso URL già registrato** in una Issue, anche chiusa. Non è un sistema generale di deduplicazione semantica: lo stesso fatto pubblicato con un URL diverso può ripresentarsi; il controllo riguarda le Issues consultate dal programma.
+### Segreti e autorizzazioni
 
-## 4. Utilizzo ordinario, senza entrare in GitHub
-
-1. Apri il [pannello Redazione PA](https://gigicogo.github.io/Redazione-PA-Agentica/).
-2. Se necessario, premi **Accedi con GitHub**: serve a riconoscerti come operatore autorizzato. Non devi gestire manualmente le Issues.
-3. Seleziona **LIVE** e inserisci un RSS HTTPS pubblico. Il pannello conserva localmente l'ultimo URL scelto nel browser: non modifica `config.json`.
-4. Premi **Avvia la ricerca** e conferma.
-5. Segui il messaggio di stato. Se la ricerca termina ma non compare nulla, può trattarsi di **STOP**, **SKIP**, fonti già viste oppure un errore: il solo messaggio «richiesta accettata» non prova che sia stata prodotta una bozza.
-6. Leggi la proposta, apri l'articolo originale, verifica **pertinenza, date, attribuzioni e fatti**, poi decidi:
-   - **RIVEDI:** salva una nuova versione del testo; per pubblicarla occorrerà un **nuovo GO**.
-   - **SCARTA:** archivia senza pubblicare.
-   - **GO:** tenta di approvare la versione visualizzata; il sistema applica comunque i blocchi di sicurezza.
-7. Utilizza **Aggiorna** se il risultato non compare subito. **Non avviare ripetutamente la stessa ricerca** senza verificarne l'esito.
-
-### DEMO e LIVE non sono la stessa cosa
-
-- **DEMO:** usa `examples/rss-demo.xml`, con esempi inventati. **Non chiama Groq**; non usa il feed digitato; non può pubblicare. Se gli URL dell'esempio sono già stati trattati, può non creare nuove Issues.
-- **LIVE:** recupera l'RSS indicato e usa Groq per la selezione e la redazione. Richiede `GROQ_API_KEY` nei GitHub Actions Secrets. Può creare una bozza oppure nessuna.
-
-### Perché «Modifica RSS predefinito» è un'operazione diversa
-
-- **RSS inserito nel pannello:** vale per la ricerca che stai avviando. Per l'uso quotidiano è sufficiente questo campo.
-- **`rss_url` in `config.json`:** è il valore di partenza del progetto e delle esecuzioni senza RSS specificato; modificarlo cambia la configurazione del repository. È un'operazione amministrativa, non un passaggio necessario a ogni ricerca.
-
-## 5. Dietro le quinte: componenti e responsabilità
-
-| Componente | Compito | Serve all'operatore? |
+| Dove | Nome | Utilizzo |
 |---|---|---|
-| **GitHub Pages (`index.html`)** | Mostra RSS, ricerca, proposte e comandi. | **Sì: è l'interfaccia unica.** |
-| **Cloudflare Worker** | Verifica il login GitHub; inoltra soltanto le azioni consentite; avvia `ricerca.yml` e ne consulta lo stato. | No, tranne il login iniziale. |
-| **GitHub Actions (`ricerca.yml`)** | Esegue raccolta RSS e lavoro del modello. | No: avvio dal pannello. |
-| **GroqCloud** | Esegue il modello nella modalità LIVE. | No: è un servizio tecnico. |
-| **GitHub Issues** | Registra proposte, fonti, revisioni, decisioni ed esiti. | No nell'uso ordinario; sì per l'audit tecnico. |
-| **GitHub Actions (`approvazione.yml`)** | Applica RIVEDI/SCARTA/GO, condizioni di pubblicazione e verifiche. | No. |
-| **Bluesky** | Eventuale pubblicazione nell'account sperimentale. | Solo quando la demo è autorizzata alla pubblicazione. |
+| **GitHub Actions Secrets** | `GROQ_API_KEY` | Ricerche LIVE |
+| **GitHub Actions Secrets** | `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Eventuale pubblicazione su Bluesky; handle senza `@` |
+| **GitHub Actions Secrets** | `METRICS_INGEST_SECRET` | Autentica l'invio delle metriche al Worker |
+| **Cloudflare Worker — Secrets** | `GITHUB_OAUTH_CLIENT_SECRET`, `GITHUB_WRITE_TOKEN`, `SESSION_SECRET` | Login e comandi autorizzati |
+| **Cloudflare Worker — Variables** | `PANEL_URL`, `REPOSITORY`, `ALLOWED_GITHUB_USER`, `GITHUB_OAUTH_CLIENT_ID` | Configurazione OAuth e repository |
+| **Cloudflare Worker — Secret** | `METRICS_INGEST_SECRET` | **Identico** al Secret GitHub, per ricevere la telemetria |
+| **Cloudflare Worker — D1 Binding** | **`METRICS_DB`** | Collega il database `redazione-pa-osservatorio` |
 
-**Autonomia dell'agente:** scegliere quale notizia esaminare, tentare fino a due approfondimenti e proporre oppure scartare. **Autonomia esclusa:** cambiare da solo missione e credenziali, eseguire istruzioni dei feed, autorizzare GO, decidere autonomamente la pubblicazione.
+Il fine-grained token GitHub del Worker deve essere limitato al repository corretto e autorizzato per **Issues: Read and write** e **Actions: Read and write**. Non pubblicare chiavi, token o password in file versionati e non incollarli nei ticket.
 
-## 6. Configurazione amministrativa essenziale
+**Il binding D1 deve chiamarsi `METRICS_DB`, non `DB`.** Le tabelle da creare nello stesso database sono `agent_runs` e `labor_entries`. L'endpoint di controllo è:
 
-### File del progetto
+`https://redazione-pa-approvazioni.gigi-cogo.workers.dev/health`
 
-| Percorso | Funzione |
-|---|---|
-| `index.html` | Pannello pubblicato su GitHub Pages. |
-| `config.json` | Feed predefinito, pubblico, linee editoriali e interruttori di sicurezza. |
-| `scripts/research.py` | Raccolta, selezione, prompt e costruzione delle proposte. |
-| `scripts/approve.py` | Validazione dei comandi umani e possibile pubblicazione. |
-| `scripts/common.py` | Recupero controllato delle fonti e accesso tecnico alle Issues. |
-| `.github/workflows/ricerca.yml` | Esecuzione della ricerca. |
-| `.github/workflows/approvazione.yml` | Elaborazione delle decisioni. |
-| `cloudflare-worker/worker.js` | Codice del gateway: **deve essere distribuito nel Worker Cloudflare**, non basta lasciarlo nel repository. |
+Con la configurazione corretta, il risultato include `"ok": true` e `"observatory": true`. Il test `/health` verifica la disponibilità di base, **non** sostituisce il collaudo di ricerca, revisioni e pubblicazione.
 
-### Parametri fondamentali
+### Aggiornamenti e test consigliati
 
-```json
-{
-  "repository": "gigicogo/Redazione-PA-Agentica",
-  "rss_url": "https://www.agid.gov.it/it/rss.xml",
-  "scheduler_enabled": false,
-  "publishing_enabled": false,
-  "max_feed_items": 6,
-  "max_inspections": 2,
-  "groq_model": "openai/gpt-oss-20b",
-  "language": "it",
-  "audience": "dipendenti pubblici e cittadini interessati alla trasformazione digitale",
-  "editorial_guidelines": "Tono informativo, chiaro, prudente, non promozionale. Nessuna affermazione priva di riscontro nella fonte. Non promettere servizi o scadenze.",
-  "max_post_characters": 300,
-  "approval_api_url": "https://redazione-pa-approvazioni.gigi-cogo.workers.dev"
-}
-```
+Prima di modificare un componente, effettua un backup della versione funzionante. Per aggiornare solo la documentazione basta sostituire **`README.md` nella radice del branch `main`**: non serve un deploy Cloudflare né modificare i workflow.
 
-È un **esempio di configurazione per questa installazione**. Non sostituire un file già personalizzato senza confrontarlo: potresti perdere modifiche ai parametri. La modifica di `audience` o `editorial_guidelines` influisce sulle **prossime ricerche**, non riscrive automaticamente le bozze già create.
-
-**Attenzione alla sicurezza:** `config.json` è pubblico nel repository. Non contiene e non deve contenere password, API key o token.
-
-### Dove sono custodite le credenziali
-
-- **GitHub Actions Secrets:** `GROQ_API_KEY`; per l'eventuale pubblicazione `BLUESKY_HANDLE` e `BLUESKY_APP_PASSWORD` (App Password, mai password principale).
-- **Cloudflare Worker → Variables and Secrets:** `PANEL_URL`, `REPOSITORY`, `ALLOWED_GITHUB_USER`, `GITHUB_OAUTH_CLIENT_ID`, e come **segreti** `GITHUB_OAUTH_CLIENT_SECRET`, `GITHUB_WRITE_TOKEN`, `SESSION_SECRET`.
-- Il **fine-grained GitHub token** usato dal Worker deve essere limitato al repository corretto e avere **Issues: Read and write** e **Actions: Read and write**. Non inserirlo nei file statici o nel README.
-- `PANEL_URL`, `REPOSITORY` e `ALLOWED_GITHUB_USER` devono corrispondere all'installazione effettiva.
-
-La pagina pubblica **non custodisce token con permessi sul repository**. La possibilità di inviare comandi dipende dall'autenticazione e dai controlli del Worker.
-
-### Guida alle installazioni successive
-
-- Primo avvio e servizi: [`AVVIO_IN_10_PASSI.md`](AVVIO_IN_10_PASSI.md) (**attenzione:** contiene riferimenti alla procedura originaria, con apertura manuale di GitHub).
-- Autorizzazione diretta: [`GUIDA_INSTALLAZIONE_PANNELLO_DIRETTO.md`](GUIDA_INSTALLAZIONE_PANNELLO_DIRETTO.md).
-- Ricerca diretta dal pannello: vedi `ISTRUZIONI_INSTALLAZIONE.md` nella **PATCH Ricerca diretta** distribuita separatamente (potrebbe non essere ancora presente nel repository).
-
-## 7. Prima prova consigliata, senza pubblicare
-
-1. Verifica in `config.json` che `"publishing_enabled": false`.
-2. Accedi al pannello ed esegui **LIVE** con un RSS pubblico HTTPS e notizie nuove. Per esempio, puoi usare un feed di trasformazione digitale come quello già provato nel laboratorio.
-3. Controlla se l'agente crea una proposta, sceglie **STOP** o trova solo notizie già elaborate.
-4. Se compare una bozza, verifica l'articolo originale e prova **RIVEDI**.
-5. Premi **GO** solo per testare il blocco: con la pubblicazione disabilitata il sistema deve respingerlo.
-6. Per testare **SCARTA**, usa una proposta che non desideri conservare: il comando la chiude.
-
-**Esercitazione utile per il corso:** ripeti una ricerca con un feed sportivo o cinematografico e chiedi ai partecipanti: «Questa proposta è davvero coerente con la missione dell'agente? Se no, il problema è nel feed, nelle istruzioni o nella decisione del modello?». Un mancato risultato può essere la scelta più corretta.
-
-## 8. Tracciabilità, qualità e limiti del prototipo
-
-Ogni proposta salvata in GitHub Issues include normalmente:
-
-- URL della fonte e indirizzo RSS utilizzato;
-- titolo e bozza del post;
-- ragione della scelta, verifiche richieste e limiti del recupero;
-- traccia dei passaggi di selezione/approfondimento e data di creazione;
-- eventuali revisioni, decisioni umane e risultato dell'approvazione;
-- collegamento al post Bluesky, se e soltanto se effettivamente pubblicato.
-
-Questo è **un registro di laboratorio**, non un sistema completo di gestione documentale o conservazione a norma. È pubblico perché il repository è pubblico: **non inserire dati personali, documenti riservati o informazioni dell'Ente non destinate alla pubblicazione**.
-
-Una risposta convincente del modello **non è una prova**. L'operatore deve controllare il contenuto direttamente nelle fonti e applicare le regole organizzative dell'Ente prima di un eventuale utilizzo reale.
-
-## 9. Attivare Bluesky — solo dopo un collaudo separato
-
-La pubblicazione non è necessaria per dimostrare la parte agentica. Quando si decide di provarla, utilizzare **un account Bluesky esclusivamente sperimentale**.
-
-Per abilitare davvero la pubblicazione servono **tutte** queste condizioni:
-
-1. Una proposta **LIVE**, ancora aperta e non scartata/pubblicata.
-2. Un comando **GO** autorizzato dopo avere controllato la versione del testo.
-3. `"publishing_enabled": true` in `config.json`.
-4. I Secrets `BLUESKY_HANDLE` e `BLUESKY_APP_PASSWORD` configurati correttamente.
-5. Una fonte **HTTPS** e un testo (bozza + URL fonte) compatibile con i limiti di pubblicazione.
-6. Il workflow di approvazione funzionante e tutte le altre verifiche superate.
-
-Se una condizione manca, il sistema deve **bloccare**, non pubblicare. Il pulsante GO non costituisce un'autorizzazione generale per i post futuri.
-
-**Interruttori di sicurezza:**
-
-- `publishing_enabled: false` → blocca i GO successivi; non cancella post già inviati.
-- `scheduler_enabled: false` → disabilita la pianificazione automatica, **non** la ricerca manuale dal pannello.
-- Per un'emergenza reale, disabilitare i workflow coinvolti e revocare le credenziali compromesse; verificare anche eventuali esecuzioni già avviate.
-
-## 10. Problemi ricorrenti
-
-| Sintomo | Prima verifica |
-|---|---|
-| RSS di sport/cinema e nessuna proposta | La missione editoriale è ancora PA/trasformazione digitale; l'agente può aver deciso STOP/SKIP. |
-| Nessuna nuova bozza dopo un RSS già usato | Articoli con lo stesso URL potrebbero essere già registrati, anche in Issues chiuse. |
-| Feed non accettato dal pannello | Serve **HTTPS pubblico**, senza credenziali, host locali e porte non consentite. |
-| Ricerca accettata, ma senza risultati | Avvio del workflow e creazione di una bozza sono cose diverse; usa Aggiorna e controlla lo stato. |
-| Errore 403 nell'avvio diretto | Token Cloudflare senza permessi Actions oppure account/risorsa non autorizzati. |
-| Pagina completa non leggibile | Potrebbe essere disponibile solo l'estratto RSS: la limitazione va verificata, non nascosta. |
-| Errore Groq 429 / limite API | È possibile avere esaurito la quota del piano; il processo non deve pubblicare nulla. |
-| Login GitHub non riconosciuto | Verificare configurazione OAuth e `ALLOWED_GITHUB_USER` del Worker. |
-| GO bloccato | Può dipendere da DEMO, `publishing_enabled: false`, testo cambiato, fonte non HTTPS, lunghezza o credenziali. |
-| RIVEDI eseguito ma vecchio testo nel pannello | Premi **Aggiorna** dopo che GitHub ha completato la modifica. |
-
-**Nota:** il pannello può funzionare anche mentre il modello decide di non produrre una proposta. Non va interpretato automaticamente come un guasto.
-
-## 11. Manutenzione e verifica locale
-
-Per sviluppatori o amministratori, non per l'operatore ordinario:
+Per i controlli automatici locali, dove il codice completo è disponibile:
 
 ```bash
 python -m pip install -r requirements.txt
-PREVIEW_ONLY=1 MODE=demo python scripts/research.py
 python -m unittest discover -s tests -v
+node --test cloudflare-worker/test-worker.mjs cloudflare-worker/test-observatory.mjs
 ```
 
-La prova locale DEMO non richiede `GROQ_API_KEY`, non pubblica su Bluesky e non crea Issues quando viene usato `PREVIEW_ONLY=1`.
+Per un collaudo funzionale, nell'ordine: login, DEMO (0 token), LIVE, RIVEDI, SCARTA, verifica del blocco GO, poi **solo se desiderato** un GO LIVE reale dopo controllo dei contenuti. Non ripetere GO in caso di esito incerto: verifica prima il profilo Bluesky e il registro.
 
-Per gli interventi sul Worker, effettuare prima un controllo di `/health`, poi un test di autenticazione, uno di ricerca e infine dei comandi di revisione, scarto e blocco GO. Un risultato verde di `/health` **non** dimostra da solo che l'intero flusso sia funzionante.
+## 8. Sicurezza, responsabilità e limiti
 
-### Possibili evoluzioni, non incluse automaticamente
+**Questa è una dimostrazione di governance, non una certificazione di conformità.** In particolare:
 
-- Un **profilo editoriale selezionabile** nel pannello (PA digitale / cultura / sport), con istruzioni e criteri distinti: **oggi non esiste**.
-- Controllo di pertinenza più esplicito e misurabile, con motivazione di esclusione.
-- Verifica incrociata su più fonti indipendenti prima della bozza.
-- Ruoli diversi per proponente, revisore e autorizzatore, con relativa policy.
-- Log e tracciabilità adeguati a un eventuale contesto istituzionale reale.
+- **Operatore unico:** la configurazione corrente autorizza uno specifico utente GitHub. Non gestisce ancora ruoli distinti di redattore, revisore e autorizzatore.
+- **Dati pubblici:** il repository e le Issues sono pubblici; anche le bozze e i commenti possono esserlo. Usare solo fonti e contenuti appropriati alla pubblicazione.
+- **Protezione dei segreti:** API key e password in GitHub/Cloudflare Secrets, mai nella pagina HTML o in `config.json`.
+- **Nessuna garanzia di verità:** la selezione dell'agente e la bozza possono contenere errori. Il funzionario controlla la fonte primaria prima del GO.
+- **Telemetria minimizzata:** nel database sono inviati contatori, stato, modello, **dominio** del feed e riferimento numerico alla Issue; **non** il testo degli articoli o dei post. Le note sulle attività umane sono un campo libero: non inserirvi dati personali o riservati.
+- **Osservatorio non retroattivo:** il periodo 7/30/90 giorni limita ciò che visualizzi, **non cancella** le righe più vecchie da D1. Va definita una politica di conservazione se il sistema evolve.
+- **Niente multiutente o contabilità ufficiale:** non sono implementati un sistema completo di audit degli accessi rifiutati, un libro mastro dei costi provider, la correzione tracciata delle ore inserite o un confronto validato con la produttività manuale.
+- **Servizi gratuiti con limiti:** Groq, GitHub, Cloudflare e Bluesky applicano quote e politiche proprie, modificabili nel tempo. Una quota esaurita può fermare una ricerca o un'azione.
+
+Per un utilizzo realmente istituzionale servirebbero una valutazione organizzativa, di sicurezza e di trattamento dei dati, ruoli e autorizzazioni formalizzati, processi di controllo qualità, gestione degli incidenti, conservazione e verifiche contrattuali sui servizi esterni.
+
+## 9. Problemi frequenti e verifiche
+
+| Sintomo | Controllo consigliato |
+|---|---|
+| Nessuna proposta dopo LIVE | Verificare se l'agente ha deciso **STOP/SKIP**, se le notizie sono già state esaminate o se il feed è inaccessibile. |
+| DEMO non crea una nuova Issue | I contenuti fittizi potrebbero essere già registrati: la deduplicazione evita alcune ripetizioni. |
+| Ricerca accettata ma nessuna bozza | L'avvio del workflow **non garantisce** una proposta. Consultare l'esito prima di ripetere. |
+| RSS sport/cinema non produce risultati | Il feed è cambiato, **la missione PA/innovazione no**. |
+| RIVEDI riuscito ma testo non aggiornato | Attendere il completamento dell'azione e premere **Aggiorna**. |
+| GO bloccato | Verificare modalità DEMO/LIVE, `publishing_enabled`, versione della bozza, stato della Issue, limiti del post e credenziali. |
+| Errore Bluesky o esito incerto | **Non premere subito GO di nuovo.** Controllare il profilo Bluesky e i log del workflow approvazione. |
+| Osservatorio vuoto | Dati disponibili solo dopo installazione; controllare login, `METRICS_DB`, tabelle e Secret condiviso. |
+| Telemetria con 401 | Controllare che `METRICS_INGEST_SECRET` coincida in GitHub e Cloudflare. |
+| Osservatorio con 503 | Controllare binding D1 `METRICS_DB` e presenza delle tabelle. |
+| Mancano alcuni consumi | L'invio è **non bloccante**: una ricerca può riuscire anche quando la telemetria fallisce. Controllare i log. |
+| Molti utenti dalla stessa rete non vedono le Issues | Il pannello consulta anche le API GitHub; possono intervenire limiti di richiesta. |
+
+## 10. Utilizzo didattico e sviluppi futuri
+
+### Cosa mostra concretamente ai dipendenti pubblici
+
+1. **Agente ≠ automazione rigida:** decide se approfondire e può fermarsi senza produrre una bozza.
+2. **Autonomia delimitata:** il codice impone limiti, strumenti e divieti.
+3. **Supervisione umana:** il funzionario deve verificare, modificare, scartare o approvare.
+4. **Tracciabilità:** le decisioni restano nel registro GitHub anche se l'operatore usa un pannello semplice.
+5. **Costo complessivo:** token e API sono solo una parte del costo; progettazione, manutenzione, qualità e sicurezza impiegano tempo umano.
+
+### Esercitazione proposta
+
+Avvia una LIVE su un feed pertinente alla trasformazione digitale e osserva l'esito. Poi prova un feed sportivo o culturale e chiedi ai partecipanti: **«Cosa deve cambiare: la fonte, la missione dell'agente oppure il controllo umano?»** Apri infine l'Osservatorio: **«Quanto è costato analizzare i contenuti, anche quando non abbiamo pubblicato nulla?»**
+
+### Evoluzioni non ancora implementate
+
+- Profili editoriali selezionabili (PA digitale, cultura, sport ecc.) con missioni distinte.
+- Multiutente con ruoli separati e autorizzazioni differenziate.
+- Registrazione dei GO bloccati e degli accessi negati con audit dedicato.
+- Costi effettivi e quote residue dei fornitori; avvisi di soglia e budget.
+- Esportazione dei dati e indicatori di qualità validati.
+- Baseline del processo manuale per misurare tempo netto risparmiato e benefici reali.
+- Regole di conservazione dei dati e correzione tracciata delle attività umane.
 
 ---
 
-### Riferimenti tecnici
+### Documentazione ufficiale dei servizi
 
-- [GitHub Actions](https://docs.github.com/en/actions)
-- [Workflow Dispatch API GitHub](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
-- [GitHub Actions Secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/)
-- [Groq API](https://console.groq.com/docs/openai)
-- [Bluesky / AT Protocol](https://docs.bsky.app/)
+[GitHub Actions](https://docs.github.com/en/actions) · [GitHub REST API](https://docs.github.com/en/rest) · [Cloudflare Workers](https://developers.cloudflare.com/workers/) · [Cloudflare D1](https://developers.cloudflare.com/d1/) · [Groq API](https://console.groq.com/docs/overview) · [Bluesky API](https://docs.bsky.app/)
 
-**Messaggio formativo:** **la fonte non è il mandato, l'agente non è il decisore e la bozza non è una pubblicazione**. La persona decide se il risultato è pertinente e utilizzabile; il sistema registra ciò che è avvenuto.
+**Principio da portare in aula:** *l'agente propone, la persona decide, il sistema registra e l'organizzazione misura.*
