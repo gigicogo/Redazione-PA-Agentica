@@ -129,9 +129,18 @@ def handler(event):
         gh.request("PATCH", f"/issues/{number}", json={"body": make_issue_text(meta)})
         gh.comment(number, "**RIVEDI registrato.** Ho aggiornato la bozza visibile anche nel pannello. Occorre un nuovo `/go` esplicito per pubblicarla.")
         return
-    if command.lower() != "/go":
-        print("Comando sconosciuto, nessuna azione")
+    go_match = re.fullmatch(r"/go(?: ([0-9a-fA-F]{64}))?", command, flags=re.IGNORECASE)
+    if not go_match:
+        print("Comando GO non riconosciuto; nessuna azione")
         return
+    expected_digest = go_match.group(1)
+    # Il pannello diretto lega ogni GO esattamente alla versione controllata.
+    # Il vecchio /go manuale resta disponibile per compatibilità con la demo precedente.
+    if expected_digest:
+        current_digest = hashlib.sha256(meta["draft"].encode("utf-8")).hexdigest()
+        if expected_digest.lower() != current_digest:
+            gh.comment(number, "**GO bloccato:** la bozza è cambiata. Aggiorna il pannello, ricontrolla e dai un nuovo GO.")
+            return
     settings = config()
     if meta["mode"] != "live":
         gh.comment(number, "**GO bloccato:** questa è una simulazione DEMO. Esegui Ricerca in modalità LIVE per poter pubblicare.")
@@ -141,7 +150,9 @@ def handler(event):
         return
     comments = gh.request("GET", f"/issues/{number}/comments?per_page=100")
     revision = approved_revision(comments, owner)
-    draft = revision if revision is not None else meta["draft"]
+    # Con impronta: usa ESATTAMENTE il testo nel metadato approvato.
+    # Senza impronta: conserva il vecchio comportamento per i comandi manuali.
+    draft = meta["draft"] if expected_digest else (revision if revision is not None else meta["draft"])
     if len(draft) > 240 or len(draft) < 20:
         gh.comment(number, "GO bloccato: il testo è troppo lungo o troppo breve. Rivedere la bozza.")
         return
