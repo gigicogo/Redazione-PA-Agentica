@@ -1,1 +1,24 @@
-
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+<title>Feed inventato · Laboratorio Redazione PA</title>
+<link>https://example.org/ufficio-comunicazione/</link>
+<description>Contenuti esclusivamente fittizi per esercitazioni</description>
+<item>
+  <title>Sportello digitale: pubblicata una guida per i cittadini</title>
+  <link>https://example.org/notizie/guida-sportello</link>
+  <description>Nel Comune immaginario di Valverde è stata pubblicata una guida illustrativa per usare lo sportello digitale. È un caso fittizio senza riferimento a servizi reali.</description>
+  <pubDate>Sat, 07 Nov 2026 09:00:00 GMT</pubDate>
+</item>
+<item>
+  <title>Nuovi arredi per un ufficio comunale</title>
+  <link>https://example.org/notizie/arredi</link>
+  <description>Il Comune immaginario di Valverde annuncia l'acquisto di nuove sedie per gli uffici. Esempio didattico.</description>
+  <pubDate>Sat, 07 Nov 2026 08:30:00 GMT</pubDate>
+</item>
+<item>
+  <title>Laboratorio pubblico sulla lettura dei dati aperti</title>
+  <link>https://example.org/notizie/opendata</link>
+  <description>Un ente locale fittizio propone un incontro aperto sulla consultazione delle tabelle pubbliche. Esempio didattico, senza date o prenotazioni reali.</description>
+  <pubDate>Sat, 07 Nov 2026 08:00:00 GMT</pubDate>
+</item>
+</channel></rss>
