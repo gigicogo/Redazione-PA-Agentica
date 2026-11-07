@@ -1,0 +1,13 @@
+{
+  "repository": "gigicogo/Redazione-PA-Agentica",
+  "rss_url": "https://www.agid.gov.it/it/rss.xml",
+  "scheduler_enabled": false,
+  "publishing_enabled": false,
+  "max_feed_items": 6,
+  "max_inspections": 2,
+  "groq_model": "openai/gpt-oss-20b",
+  "language": "it",
+  "audience": "dipendenti pubblici e cittadini interessati alla trasformazione digitale",
+  "editorial_guidelines": "Tono informativo, chiaro, prudente, non promozionale. Nessuna affermazione priva di riscontro nella fonte. Non promettere servizi o scadenze.",
+  "max_post_characters": 300
+}
