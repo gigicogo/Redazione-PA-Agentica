@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,6 +17,9 @@ import requests
 from bs4 import BeautifulSoup
 
 from common import GitHub, ROOT, config, fetch_public, pack_meta, safe_excerpt, utc_now, unpack_meta
+from telemetry import RunMeter, host_only, send_meter
+
+METER = RunMeter()
 
 
 def node_text(node, tag_names):
@@ -60,12 +64,15 @@ def groq_json(system, user, cfg):
     payload = {"model": cfg["groq_model"], "temperature": 0.2, "max_completion_tokens": 900, "reasoning_effort": "low", "include_reasoning": False,
                "response_format": {"type": "json_object"},
                "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    METER.groq_attempts += 1
     r = requests.post("https://api.groq.com/openai/v1/chat/completions",
                       headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                       json=payload, timeout=(12, 48))
     if not r.ok:
         raise RuntimeError(f"Groq HTTP {r.status_code}: elaborazione non completata, nessuna pubblicazione")
-    text = r.json()["choices"][0]["message"].get("content") or ""
+    reply = r.json()
+    METER.usage(reply.get("usage", {}))  # Conteggio reale restituito da Groq, non stima.
+    text = reply["choices"][0]["message"].get("content") or ""
     try:
         result = json.loads(text)
     except Exception:
@@ -182,18 +189,25 @@ Il collegamento alla fonte verrà aggiunto automaticamente solo al momento della
 
 def build(mode, rss_override=""):
     cfg = config()
+    METER.mode = mode
+    METER.model = cfg["groq_model"] if mode == "live" else ""
     if mode == "demo":
         feed_blob = (ROOT / "examples/rss-demo.xml").read_bytes()
         feed = "ESEMPIO FITTIZIO"
     else:
         if os.environ.get("GITHUB_EVENT_NAME") == "schedule" and not cfg.get("scheduler_enabled", False):
             print("Pianificazione disabilitata in config.json: nessuna attività")
+            METER.status = "skipped"
+            METER.result = "scheduler_disabled"
             return None
         feed = rss_override.strip() or cfg["rss_url"]
+        METER.feed_host = host_only(feed)
         feed_blob, final_feed = fetch_public(feed)
         feed = final_feed
     items = parse_feed(feed_blob, cfg["max_feed_items"])
+    METER.feed_items = len(items)
     if not items:
+        METER.result = "empty_feed"
         print("Nessun contenuto leggibile nel feed. Nessuna Issue creata.")
         return None
     gh = None if os.environ.get("PREVIEW_ONLY") else GitHub()
@@ -204,7 +218,9 @@ def build(mode, rss_override=""):
             if m and m.get("source_url"):
                 existing.add(m["source_url"])
     items = [x for x in items if x["url"] not in existing]
+    METER.new_items = len(items)
     if not items:
+        METER.result = "already_processed"
         print("Articoli già esaminati: nessuna nuova Issue.")
         return None
     trace = ["Lettura del feed: " + str(len(items)) + " candidati non ancora elaborati"]
@@ -230,6 +246,7 @@ def build(mode, rss_override=""):
             ignored.add(idx)
             chosen = items[idx]
             trace.append("Pianificazione AI: approfondisco «" + chosen["title"] + "» perché " + selected["reason"])
+            METER.inspections += 1
             content, quality, _ = get_full_article(chosen)
             trace.append("Strumento di lettura usato: " + quality)
             result = propose(chosen, content, quality, cfg)
@@ -238,6 +255,7 @@ def build(mode, rss_override=""):
                 break
             chosen, result = None, None
         if chosen is None or result is None:
+            METER.result = "ai_stopped"
             print("L'agente ha deciso di non proporre post. Nessuna Issue creata.")
             return None
     meta = {"version": 1, "mode": mode, "title": chosen["title"], "source_url": chosen["url"], "feed_url": feed,
@@ -250,6 +268,8 @@ def build(mode, rss_override=""):
         gh.ensure_label(name, color)
     issue = gh.request("POST", "/issues", json={"title": f"[Redazione PA] {chosen['title']}",
                                                   "body": make_issue_text(meta), "labels": ["pa-bozza"]})
+    METER.issue_number = int(issue["number"])
+    METER.result = "proposal_created"
     print("Creata proposta in GitHub Issues:", issue["html_url"])
     return meta
 
@@ -258,4 +278,18 @@ if __name__ == "__main__":
     mode = os.environ.get("MODE", "demo").lower().strip()
     if mode not in ("demo", "live"):
         sys.exit("MODE deve essere demo oppure live")
-    build(mode, os.environ.get("RSS_OVERRIDE", ""))
+    METER.mode = mode
+    started = time.monotonic()
+    try:
+        build(mode, os.environ.get("RSS_OVERRIDE", ""))
+    except Exception:
+        METER.status = "failed"
+        METER.result = "error"
+        raise
+    finally:
+        METER.duration_ms = int((time.monotonic() - started) * 1000)
+        # La telemetria NON influisce mai su ricerca, decisioni o pubblicazione.
+        try:
+            send_meter(METER, config())
+        except Exception:
+            print("Osservatorio: impossibile registrare la misurazione; ricerca invariata.")
