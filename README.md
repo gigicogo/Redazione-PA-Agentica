@@ -2,7 +2,7 @@
 
 **Laboratorio di intelligenza artificiale agentica, supervisione umana e controllo dei costi nella Pubblica Amministrazione.**
 
-[**Apri la web app**](https://gigicogo.github.io/Redazione-PA-Agentica/) · [Repository e registro tecnico](https://github.com/gigicogo/Redazione-PA-Agentica)
+[**Apri la web app**](https://gigicogo.github.io/Redazione-PA-Agentica/)
 
 > **La regola del progetto:** l'agente può cercare, selezionare, approfondire e scrivere una proposta. **Non può decidere autonomamente di pubblicarla.** L'operatore verifica la fonte, può correggere o scartare e autorizza esplicitamente ogni eventuale pubblicazione.
 
