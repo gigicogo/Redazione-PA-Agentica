@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 import requests
@@ -16,7 +17,50 @@ from common import GitHub, config, unpack_meta, utc_now
 from research import make_issue_text
 
 
-def atproto_post(issue_number: int, text: str, repo: str):
+def stable_post_rkey(issue_number: int, repo: str, issue_created_at: str) -> str:
+    """TID valido, deterministico per Issue: mantiene la protezione contro i duplicati.
+
+    I post Bluesky richiedono un record key TID (13 caratteri base32-sortable),
+    non una stringa arbitraria come `pa-...`.
+    """
+    if not issue_created_at:
+        raise RuntimeError("Impossibile generare il TID: data di creazione della Issue mancante")
+    try:
+        created = datetime.fromisoformat(issue_created_at.replace("Z", "+00:00"))
+        if created.tzinfo is None:
+            raise ValueError("timezone mancante")
+    except (ValueError, TypeError) as exc:
+        raise RuntimeError("Impossibile generare il TID: data Issue non valida") from exc
+    seed = hashlib.sha256(f"{repo}#{issue_number}".encode("utf-8")).digest()
+    # GitHub espone la data della Issue al secondo: i microsecondi sono
+    # ricavati deterministicamente dall'identità della Issue per distinguerle.
+    microseconds = int(created.timestamp()) * 1_000_000 + int.from_bytes(seed[:4], "big") % 1_000_000
+    clock_id = int.from_bytes(seed[4:6], "big") & 1023
+    integer = (microseconds << 10) | clock_id
+    if integer >= (1 << 64) or integer < 0:
+        raise RuntimeError("Data Issue fuori dall'intervallo TID")
+    alphabet = "234567abcdefghijklmnopqrstuvwxyz"
+    chars = []
+    for _ in range(13):
+        chars.append(alphabet[integer & 31])
+        integer >>= 5
+    return "".join(reversed(chars))
+
+
+def bluesky_error(response) -> str:
+    """Solo codice e messaggio restituiti da Bluesky: mai token o credenziali."""
+    try:
+        body = response.json()
+        if isinstance(body, dict):
+            kind = str(body.get("error", ""))[:80]
+            detail = str(body.get("message", ""))[:220]
+            return (kind + (": " + detail if detail else "")).strip(": ")
+    except (ValueError, TypeError):
+        pass
+    return "dettaglio non disponibile"
+
+
+def atproto_post(issue_number: int, text: str, repo: str, issue_created_at: str):
     handle = os.environ.get("BLUESKY_HANDLE", "").strip()
     pw = os.environ.get("BLUESKY_APP_PASSWORD", "").strip()
     if not handle or not pw:
@@ -28,8 +72,7 @@ def atproto_post(issue_number: int, text: str, repo: str):
     sess = session.json()
     did = sess["did"]
     access = sess["accessJwt"]
-    digest = hashlib.sha256(repo.encode("utf-8")).hexdigest()[:10]
-    rkey = f"pa-{digest}-{issue_number}"  # identità stabile: non può ripubblicare due volte la stessa Issue
+    rkey = stable_post_rkey(issue_number, repo, issue_created_at)
     get_url = "https://bsky.social/xrpc/com.atproto.repo.getRecord"
     params = {"repo": did, "collection": "app.bsky.feed.post", "rkey": rkey}
     headers = {"Authorization": "Bearer " + access}
@@ -37,12 +80,12 @@ def atproto_post(issue_number: int, text: str, repo: str):
         existing = requests.get(get_url, params=params, headers=headers, timeout=20)
         if existing.status_code == 200:
             return f"https://bsky.app/profile/{quote(handle, safe='.')}/post/{rkey}", True
-        # Altre risposte 4xx non garantiscono assenza del record; il record non esiste soltanto con errore 400 specifico.
+        # Solo RecordNotFound è una prova che il record non esista.
+        # Un generico InvalidRequest può indicare un rkey non valido o altri errori.
         if existing.status_code not in (400, 404):
-            raise RuntimeError(f"Verifica duplicati Bluesky non riuscita (HTTP {existing.status_code})")
-        error = existing.json()
-        if error.get("error") not in ("RecordNotFound", "InvalidRequest", "NotFound"):
-            raise RuntimeError("Impossibile verificare l'assenza di una pubblicazione precedente")
+            raise RuntimeError(f"Verifica duplicati Bluesky non riuscita (HTTP {existing.status_code}: {bluesky_error(existing)})")
+        if existing.json().get("error") != "RecordNotFound":
+            raise RuntimeError(f"Impossibile verificare l'assenza del post (HTTP {existing.status_code}: {bluesky_error(existing)})")
     except requests.RequestException as exc:
         raise RuntimeError("Impossibile verificare i post esistenti; pubblicazione bloccata") from exc
     # Rendi cliccabile la fonte, usando gli offset in byte richiesti da AT Protocol.
@@ -52,7 +95,8 @@ def atproto_post(issue_number: int, text: str, repo: str):
              "features": [{"$type": "app.bsky.richtext.facet#link", "uri": source_url}]}
     payload = {"repo": did, "collection": "app.bsky.feed.post", "rkey": rkey,
                "record": {"$type": "app.bsky.feed.post", "text": text, "facets": [facet],
-                          "createdAt": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()}}
+                          "createdAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                          "langs": ["it"]}}
     res = requests.post("https://bsky.social/xrpc/com.atproto.repo.createRecord", json=payload,
                         headers=headers, timeout=30)
     if not res.ok:
@@ -60,7 +104,7 @@ def atproto_post(issue_number: int, text: str, repo: str):
         retry_check = requests.get(get_url, params=params, headers=headers, timeout=20)
         if retry_check.ok:
             return f"https://bsky.app/profile/{quote(handle, safe='.')}/post/{rkey}", True
-        raise RuntimeError(f"Bluesky non ha accettato il post (HTTP {res.status_code})")
+        raise RuntimeError(f"Bluesky non ha accettato il post (HTTP {res.status_code}: {bluesky_error(res)})")
     return f"https://bsky.app/profile/{quote(handle, safe='.')}/post/{rkey}", False
 
 
@@ -165,7 +209,7 @@ def handler(event):
     if len(text) > min(300, int(settings.get("max_post_characters", 300))) or len(text.encode("utf-8")) > 2900:
         gh.comment(number, "GO bloccato: testo + link della fonte oltre i limiti di Bluesky. Riduci il testo con `/rivedi` e riprova.")
         return
-    link, existed = atproto_post(number, text, repo)
+    link, existed = atproto_post(number, text, repo, issue.get("created_at", ""))
     gh.ensure_label("pa-pubblicato", "1A8754")
     gh.add_label(number, "pa-pubblicato")
     gh.comment(number, "**GO eseguito** — post " + ("già presente (nessun duplicato)" if existed else "pubblicato") + ".\n\n" +
