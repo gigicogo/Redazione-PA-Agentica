@@ -1,1 +1,26 @@
-
+name: 'Redazione PA · approvazione umana'
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: redazionepa-approvazione-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  approve:
+    # Solo il proprietario autenticato può richiedere operazioni con le credenziali social.
+    if: github.event.comment.user.login == github.repository_owner && !github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install -r requirements.txt
+      - name: 'Esegui GO, RIVEDI o SCARTA tramite commento GitHub'
+        run: python scripts/approve.py
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
