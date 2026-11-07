@@ -2,7 +2,7 @@
   "repository": "gigicogo/Redazione-PA-Agentica",
   "rss_url": "https://www.agid.gov.it/it/rss.xml",
   "scheduler_enabled": false,
-  "publishing_enabled": false,
+  "publishing_enabled": true,
   "max_feed_items": 6,
   "max_inspections": 2,
   "groq_model": "openai/gpt-oss-20b",
